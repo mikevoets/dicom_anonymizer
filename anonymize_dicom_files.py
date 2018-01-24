@@ -158,3 +158,5 @@ for pID, invIDs in person_invitations_dict:
         #  and place the anonymized DICOM files into
         #  the `anonymized_screening_path`.
         da.run(original_screening_path, anonymized_screening_path)
+        
+        # TODO: Write rest of variables to a csv or txt file.

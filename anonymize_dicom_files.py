@@ -1,4 +1,5 @@
 from dicom_anon import dicom_anon
+import dateparser
 import argparse
 import os
 import csv
@@ -12,30 +13,6 @@ import uuid
 # Global variables. Can be modified.
 delimiter = " "
 skip_first_line = False
-
-
-def find_dicom_path(person_id, invitation_id):
-    # This function has two parameters: person_id and invitation_id.
-    # The return value is the path to the DICOM files relative from the
-    #  input parameter `source_dir`, that corresponds to the given
-    #  person ID and invitation ID.
-    #
-    # For example, if the directory structure is as follows:
-    #
-    # 1001/
-    #     100001/
-    #         file1.dicom
-    #         file2.dicom
-    #         file3.dicom
-    # 1002/
-    #     100020/
-    #         otherfile1.dicom
-    #         otherfile2.dicom
-    #
-    # , and 1001 and 1002 are person IDs, and 100001 and 100020 are
-    #   invitation IDs, then the return value of this function should be:
-    #   os.path.join(person_id, invitation_id)  # => e.g. 1001/100001/
-    pass
 
 
 # Input parameters:
@@ -68,6 +45,51 @@ args = parser.parse_args()
 parsed_modalities = str(args.modalities).split(",")
 source = str(args.source_dir)
 metadata_path = str(args.metadata_path)
+
+
+def find_dicom_path(person_id, invitation_id):
+    # This function has two parameters: person_id and invitation_id.
+    # The return value is the path to the DICOM files relative from the
+    #  input parameter `source_dir`, that corresponds to the given
+    #  person ID and invitation ID.
+    #
+    # For example, if the directory structure is as follows:
+    #
+    # 1001/
+    #     100001/
+    #         file1.dicom
+    #         file2.dicom
+    #         file3.dicom
+    # 1002/
+    #     100020/
+    #         otherfile1.dicom
+    #         otherfile2.dicom
+    #
+    # , and 1001 and 1002 are person IDs, and 100001 and 100020 are
+    #   invitation IDs, then the return value of this function should be:
+    #   os.path.join(person_id, invitation_id)  # => e.g. 1001/100001/
+    pass
+
+
+def deidentify_variables(variable_list):
+    # This function accepts a list with variables from the csv file
+    #  from Krefregisteret. The list of variables follows the same order
+    #  as the variables from the csv file, but does not contain pID nor
+    #  invID. The first element in the list is thus O2_Bildetakingsdato.
+    #
+    # This function does the following:
+    #  - O2_Bildetakingsdato is converted from dd.mmm.yyyy to yyyy.
+    #  - Diagnosedato is made relative from O2_Bildetakingsdato in days.
+    screening_date = dateparser.parse(variable_list[0])
+    diagnose_date = dateparser.parse(variable_list[7])
+
+    variable_list[0] = str(screening_date.year)
+
+    diagnose_screening_delta = diagnose_date - screening_date
+    variable_list[7] = str(diagnose_screening_delta.days)
+
+    return variable_list
+
 
 # Create an instance of the dicom anonymizer (dicom-anon).
 #  quarantine: The folder where DICOMs that cannot be anonymized are copied
@@ -116,15 +138,18 @@ with open(metadata_path, 'rb') as metadata:
         # The third element is assumed to be O2_Bildetakingsdato.
         pID, invID = line[0:2]
 
+        # De-identify the rest of the variables.
+        variables = deidentify_variables(line[3:])
+
         # Check if pID already exists in the dictionary.
         # If it does, add new invID to the dictionary along with the other
         #  variables.
         # If it does not, create a new dictionary key with pID and store
         #  the first invID along with the other variables.
         if pID in person_invitations_dict:
-            person_invitations_dict[pID][invID] = line[3:]
+            person_invitations_dict[pID][invID] = variables
         else:
-            person_invitations_dict[pID] = {invID: line[3:]}
+            person_invitations_dict[pID] = {invID: variables}
 
 
 
@@ -158,5 +183,5 @@ for pID, invIDs in person_invitations_dict:
         #  and place the anonymized DICOM files into
         #  the `anonymized_screening_path`.
         da.run(original_screening_path, anonymized_screening_path)
-        
-        # TODO: Write rest of variables to a csv or txt file.
+
+        # TODO: Write variables to a new de-identified csv file.

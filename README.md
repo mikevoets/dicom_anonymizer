@@ -30,6 +30,20 @@ git submodule update --init
 
 Notice: For Windows users, it may be that cloning only works if you are using [Git bash](https://git-scm.com/downloads).
 
+To test if the script can be run succesfully, execute the script in test mode with `-t` and without any other arguments:
+
+```
+python anonymize_dicom_files.py -t
+```
+
+If the test ran succesfully, the output should be as follows:
+
+```
+Start anonymizing DICOMs of 1 patients.
+Anonymization has finished.
+=== Test has run smoothly!
+```
+
 ## Example
 
 Assume the identified DICOM files are in a directory called `identified` in your home directory, and you want the de-identified files to be placed in a directory called `cleaned` in your home directory.

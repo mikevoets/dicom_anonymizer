@@ -6,12 +6,6 @@ import os
 import csv
 import uuid
 
-# Requirements (see requirements.txt):
-#  Python 2.7
-#  Pydicom
-#  Sqlite3
-#  Dateparser
-
 # Global variables. Can be modified.
 delimiter = " "
 skip_first_line = True

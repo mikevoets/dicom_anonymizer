@@ -8,7 +8,9 @@ This is a Python script for anonymization of DICOM files, and can be used from t
 
 The source csv file should contain variables from Kreftregisteret in a specific order. It is assumed that the personal ID, invitation ID, screening date, and diagnosis date, are the 1st, 2nd, 3rd, and 10th variable in each row in the csv file, respectively.
 
-__!!!__: The function `.find_dicom_path` in `anonymize_dicom_files.py` on line 65 must be implemented in order to be able to run this script successfully.
+### Important!
+
+The function `.find_dicom_path` in `anonymize_dicom_files.py` on line 65 must be implemented in order to be able to run this script successfully.
 
 ## Prerequisites
 

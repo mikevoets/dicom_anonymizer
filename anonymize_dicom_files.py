@@ -103,7 +103,7 @@ def deidentify_variables(variable_list):
     #  invID. The first element in the list is thus O2_Bildetakingsdato.
     #
     # This function does the following:
-    #  - O2_Bildetakingsdato is converted from dd.mmm.yyyy to yyyy.
+    #  - O2_Bildetakingsdato is converted from dd.mmm.yyyy to mmm.yyyy.
     #  - Diagnosedato is made relative from O2_Bildetakingsdato in days.
     screening_date = dateparser.parse(variable_list[0])
     diagnose_date = dateparser.parse(variable_list[7])

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from dicom_anon import dicom_anon
 import dateparser
 import argparse
@@ -15,7 +16,6 @@ import uuid
 delimiter = " "
 skip_first_line = True
 
-
 # Input parameters:
 #  kreftregisteret_csv Path to csv file from Kreftregisteret.
 #  destination_variables_csv Path to csv file for de-identified variables.
@@ -26,33 +26,46 @@ skip_first_line = True
 #      transferred to.
 #  --modalities -m (optional) Restrict modalities.
 #      By default only MG and OT will be allowed.
-
+#  -t For testing purposes.
 parser = argparse.ArgumentParser(description="Anonymize DICOM files.")
-parser.add_argument("kreftregisteret_csv", type=str,
+parser.add_argument("kreftregisteret_csv", type=str, nargs="?",
                     help="path to csv file containing variables from "
                          "Kreftregisteret")
-parser.add_argument("destination_variables_csv", type=str,
+parser.add_argument("destination_variables_csv", type=str, nargs="?",
                     help="path to csv file where de-identified variables "
                          "should be written to")
-parser.add_argument("source_dicom_dir", type=str,
+parser.add_argument("source_dicom_dir", type=str, nargs="?",
                     help="root path to source directory with DICOM files")
-parser.add_argument("destination_dicom_dir", type=str,
+parser.add_argument("destination_dicom_dir", type=str, nargs="?",
                     help="root path to destination directory where anonymized "
                          "DICOM files should be written to")
-parser.add_argument("-m", "--modalities", type=str, default="ot,mg",
+parser.add_argument("-m", "--modalities", type=str, default="ot,mg", 
                     help="restrict modalities, comma separated "
                          "(default: ot,mg)")
+parser.add_argument("-t", action="store_true",
+                    help="test mode, ignores all other arguments if set")
 
 # Retrieve input parameters.
 args = parser.parse_args()
+test_mode = args.t
 
-# Create a list from the comma separated modalities, so that they can be
-#  used in the dicom anon call to anonymize the DICOM files.
-parsed_modalities = str(args.modalities).split(",")
-source_dicom_dir = str(args.source_dicom_dir)
-destination_dicom_dir = str(args.destination_dicom_dir)
-destination_variables_csv = str(args.destination_variables_csv)
-kreftregisteret_csv = str(args.kreftregisteret_csv)
+if test_mode is True:
+    # Test mode. Uses tests folder.
+    skip_first_line = False
+    kreftregisteret_csv = "tests/variables.csv"
+    destination_variables_csv = "tests/cleaned_variables.csv"
+    source_dicom_dir = "tests/identify"
+    destination_dicom_dir = "tests/cleaned"
+    parsed_modalities = ["mg"]
+
+else:
+    # Create a list from the comma separated modalities, so that they can be
+    #  used in the dicom anon call to anonymize the DICOM files.
+    kreftregisteret_csv = str(args.kreftregisteret_csv)
+    destination_variables_csv = str(args.destination_variables_csv)
+    source_dicom_dir = str(args.source_dicom_dir)
+    destination_dicom_dir = str(args.destination_dicom_dir)
+    parsed_modalities = str(args.modalities).split(",")
 
 
 class NotImplementedError(Exception):
@@ -63,6 +76,8 @@ class NotImplementedError(Exception):
 
 
 def find_dicom_path(source_dir, person_id, invitation_id):
+    if test_mode is True:
+        return os.path.join(source_dir, person_id, invitation_id)
     # This function has three parameters: source_dir, person_id
     #  and invitation_id.
     # The return value is the absolute path to the DICOM files that
@@ -188,6 +203,9 @@ with open(kreftregisteret_csv, 'rb') as kr_csv:
 # We use this dictionary to de-identify the original folder structure,
 #  DICOM files and the csv file from Kreftregisteret.
 
+print("Start anonymizing DICOMs of {} patients."
+      .format(len(person_invitations_dict.keys())))
+
 with open(destination_variables_csv, 'wb') as destination_csv:
     variable_writer = csv.writer(destination_csv, delimiter=delimiter)
 
@@ -224,3 +242,8 @@ with open(destination_variables_csv, 'wb') as destination_csv:
 
             # Write variables to a new de-identified csv file.
             variable_writer.writerow([random_uuid] + deidentified_variables)
+
+print("Anonymization has finished.")
+
+if test_mode is True:
+    print("=== Test has run smoothly!") 

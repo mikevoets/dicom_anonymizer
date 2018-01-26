@@ -1,0 +1,9 @@
+# This file collects all required third-party applications that are needed
+# to run this project. Later you can install all these apps in a row
+# using pip. Example::
+#
+#     pip install -U -r requirements.txt
+
+pydicom==0.9.9
+dateparser==0.6.0
+dicom==0.9.9.post1

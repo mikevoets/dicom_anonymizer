@@ -204,7 +204,6 @@ with open(destination_variables_csv, 'wb') as destination_csv:
 
         for invID, deidentified_variables in invIDs.iteritems():
             # Find path to DICOM files from pID and invID.
-            # TODO: Needs to be implemented. See line 64.
             original_screening_path = find_dicom_path(source_dicom_dir,
                                                       pID, invID)
 

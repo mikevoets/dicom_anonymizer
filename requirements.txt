@@ -4,6 +4,6 @@
 #
 #     pip install -U -r requirements.txt
 
-pydicom==0.9.9
-dateparser==0.6.0
-dicom==0.9.9.post1
+pydicom
+dateparser
+dicom

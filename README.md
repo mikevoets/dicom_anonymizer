@@ -22,11 +22,13 @@ You can install all requirements by using pip:
 pip install -U -r requirements.txt
 ```
 
-You will also need to load the dicom-anon submodule (assuming you have Git):
+You will also need to load the dicom-anon submodule (assuming you have Git installed):
 
 ```
 git submodule update --init
 ```
+
+Notice: For Windows users, it may be that cloning only works if you are using [Git bash](https://git-scm.com/downloads).
 
 ## Example
 

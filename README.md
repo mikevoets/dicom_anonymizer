@@ -1,4 +1,5 @@
 Written by Mike Voets, UiT Arctic University of Norway, 2018.
+Report: [link](https://github.com/mikevoets/dicom_anonymizer/blob/master/doc/report.pdf)
 
 # Python DICOM Anonymizer
 

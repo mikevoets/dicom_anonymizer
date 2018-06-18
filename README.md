@@ -49,6 +49,8 @@ Anonymization has finished.
 
 Assume the identified DICOM files are in a directory called `identified` in your home directory, and you want the de-identified files to be placed in a directory called `cleaned` in your home directory.
 
+The csv file that contains the links between screenings (StudyIDs) and variables from Kreftregisteret is called `links.csv`.
+
 The variables from Kreftregisteret are placed in a csv file called `variables.csv`, and you want the de-identified variables to be placed in a new csv file called `cleaned_variables.csv`.
 
 The following example starts the script, and uses [dicom-anon](https://github.com/chop-dbhi/dicom-anon) to de-identify the DICON files. Dicom-anon attempts to be compliant with the Basic Application Level Confidentiality Profile as specified in [DICOM 3.15 Annex E document](ftp://medical.nema.org/medical/dicom/2011/11_15pu.pdf) on page 85.
@@ -56,7 +58,7 @@ The following example starts the script, and uses [dicom-anon](https://github.co
 The de-identifier script creates a sqlite database with a table containing the original and cleaned version of every attribute. This file can be removed after running this script. Files that are explicitly marked as containing burnt-in data along with files that have a series description of "Patient Protocol", will be copied to the `quarantine` folder.
 
 ```
-python anonymize_dicom_files.py variables.csv cleaned_variables.csv identified cleaned
+python anonymize_dicom_files.py variables.csv links.csv cleaned_variables.csv identified cleaned
 ```
 
 As a default only [modalities](https://www.dicomlibrary.com/dicom/modality/) MG and OT are allowed. If for any reason you need to specify other modalities, you will need to use the `--modalities` argument and specify the allowed modalities yourself. Multiple modalities should be comma-separated.

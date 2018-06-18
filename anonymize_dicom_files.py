@@ -86,11 +86,18 @@ def create_study_index(dicom_paths):
     for path in dicom_paths:
         f = dicom.read_file(path)
         dir = os.path.dirname(path)
+
         if f.StudyID in index:
-            if dir != index[f.StudyID]['directory']:
-                raise TypeError('Unexpected studyID in multiple directories')
-        else:
-            index[f.StudyID] = {'directory': dir}
+            idx_dir = index[f.StudyID]['directory']
+            # Can be subdirectory, so we traverse down until match.
+            while idx_dir != dir:
+                dir = os.path.dirname(dir)
+                idx_dir = os.path.dirname(idx_dir)
+
+                if dir == os.path.abspath(source_dicom_dir):
+                    raise TypeError('Unexpected studyID in multiple directories')
+
+        index[f.StudyID] = {'directory': dir}
     return index
 
 
@@ -138,15 +145,6 @@ def anonymize_dicoms(source, destination):
                               profile="clean",
                               white_list=os.path.abspath(white_list_laterality))
     da.run(source, destination)
-
-    # Also anonymize file names of DICOM files.
-    for idx, file in enumerate(os.listdir(destination)):
-        # Get absolute file path to DICOM file.
-        file_path = os.path.join(destination, file)
-
-        # Rename DICOM to <idx>.dcm (starting idx from 1).
-        new_file_path = os.path.join(destination, "{}.dcm".format(idx+1))
-        os.rename(file_path, new_file_path)
 
 
 def find_substr(list, substr):

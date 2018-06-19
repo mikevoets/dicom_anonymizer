@@ -8,11 +8,14 @@ import csv
 import uuid
 import fnmatch
 
+
+# Set working directory to directory of this file.
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 # Global variables. Can be modified.
 delimiter = ";"
 skip_first_line = True
 dicom_extension = "dcm"
-os.chdir(os.path.dirname(__file__))
 white_list_laterality = "white_list_laterality.json"
 
 # Input parameters:

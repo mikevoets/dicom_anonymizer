@@ -125,8 +125,9 @@ def deidentify_variables(variable_list):
     variable_list[0] = "{0}-{1}".format(screening_date.month,
                                         screening_date.year)
 
-    diagnose_screening_delta = diagnose_date - screening_date
-    variable_list[7] = str(diagnose_screening_delta.days)
+    if diagnose_date:
+        diagnose_screening_delta = diagnose_date - screening_date
+        variable_list[7] = str(diagnose_screening_delta.days)
 
     return variable_list
 

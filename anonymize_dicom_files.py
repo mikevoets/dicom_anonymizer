@@ -12,7 +12,8 @@ import fnmatch
 delimiter = ";"
 skip_first_line = True
 dicom_extension = "dcm"
-white_list_laterality = "./white_list_laterality.json"
+os.chdir(os.path.dirname(__file__))
+white_list_laterality = "white_list_laterality.json"
 
 # Input parameters:
 #  kreftregisteret_csv Path to csv file from Kreftregisteret.

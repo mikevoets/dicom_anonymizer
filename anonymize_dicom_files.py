@@ -9,7 +9,7 @@ import uuid
 import fnmatch
 
 # Global variables. Can be modified.
-delimiter = ","
+delimiter = ";"
 skip_first_line = True
 dicom_extension = "dcm"
 white_list_laterality = "./white_list_laterality.json"

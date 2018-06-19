@@ -216,7 +216,14 @@ with open(kreftregisteret_csv, 'rb') as f:
         invNR_in_index = find_substr(index_invNRs, invNR)
 
         # Place the variables in the index for this invitation number.
-        index[invNR_in_index]['variables'] = variables
+        try:
+            index[invNR_in_index]['variables'] = variables
+        except KeyError:
+            print('Index has the following keys (invNRs/studyIDs):\n' \
+                  '{}'.format("\n".join(index_invNRs)))
+            raise KeyError(
+                'No invNR/studyID {0} in index (pID: {1}, invID: {2})'
+                .format(invNR, pID, invID))
 
         # Check if pID already exists in the dictionary.
         # If it does, add new index entry (screening).

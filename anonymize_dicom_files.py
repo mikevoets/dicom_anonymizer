@@ -89,13 +89,21 @@ def create_study_index(dicom_paths):
 
         if f.StudyID in index:
             idx_dir = index[f.StudyID]['directory']
-            # Can be subdirectory, so we traverse down until match.
-            while idx_dir != dir:
-                dir = os.path.dirname(dir)
-                idx_dir = os.path.dirname(idx_dir)
+            # Can be subdirectory, so we traverse down to find common ancestor.
+            if idx_dir != dir:
+                common_ancestor_dir = os.path.dirname(
+                    os.path.commonprefix([dir, idx_dir]))
 
-                if dir == os.path.abspath(source_dicom_dir):
-                    raise TypeError('Unexpected studyID in multiple directories')
+                if common_ancestor_dir == source_dicom_dir:
+                    common_slashes = min(
+                        [len(idx_dir.split('/')), len(dir.split('/'))])
+                    dir = '/'.join(dir.split('/')[0:common_slashes])
+                    idx_dir = '/'.join(idx_dir.split('/')[0:common_slashes])
+                    raise TypeError(
+                        'Unexpected studyID in multiple directories:\n' \
+                        'Same studyID in "{0}" and "{1}"!'.format(dir, idx_dir))
+
+                dir = common_ancestor_dir
 
         index[f.StudyID] = {'directory': dir}
     return index

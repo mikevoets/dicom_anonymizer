@@ -29,7 +29,7 @@ parser = argparse.ArgumentParser(description="Anonymize DICOM files.")
 parser.add_argument("kreftregisteret_csv", type=str, nargs="?",
                     help="path to csv file containing variables from "
                          "Kreftregisteret")
-parser.add_argument("krefregisteret_links_csv", type=str, nargs="?",
+parser.add_argument("kreftregisteret_links_csv", type=str, nargs="?",
                     help="path to csv file containing links to variables file")
 parser.add_argument("destination_variables_csv", type=str, nargs="?",
                     help="path to csv file where de-identified variables "
@@ -62,7 +62,7 @@ if test_mode is True:
 else:
     # Create a list from the comma separated modalities, so that they can be
     #  used in the dicom anon call to anonymize the DICOM files.
-    links_csv = str(args.links_csv)
+    links_csv = str(args.kreftregisteret_links_csv)
     kreftregisteret_csv = str(args.kreftregisteret_csv)
     destination_variables_csv = str(args.destination_variables_csv)
     source_dicom_dir = str(args.source_dicom_dir)

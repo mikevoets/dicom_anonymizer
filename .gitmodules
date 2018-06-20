@@ -1,0 +1,3 @@
+[submodule "dicom_anon"]
+	path = dicom_anon
+	url = https://github.com/mikevoets/dicom-anon

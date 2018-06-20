@@ -1,3 +1,0 @@
-[submodule "dicom_anon"]
-	path = dicom_anon
-	url = https://github.com/chop-dbhi/dicom-anon.git

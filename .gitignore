@@ -1,3 +1,4 @@
 dicom_anon.log
 identity.db
 example_dicoms/
+anonymize_dicom_files.log

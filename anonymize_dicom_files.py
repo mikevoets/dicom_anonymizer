@@ -7,6 +7,7 @@ import os
 import csv
 import uuid
 import fnmatch
+import logging
 
 
 # Set working directory to directory of this file.
@@ -17,6 +18,9 @@ delimiter = ";"
 skip_first_line = True
 dicom_extension = "dcm"
 white_list_laterality = "white_list_laterality.json"
+log_file = "anonymize_dicom_files.log"
+
+logging.basicConfig(filename=log_file, filemode='w', level=logging.DEBUG)
 
 # Input parameters:
 #  kreftregisteret_csv Path to csv file from Kreftregisteret.
@@ -87,7 +91,10 @@ def create_study_index(dicom_paths):
     # Creates a dictionary index of StudyIDs and paths to DICOM
     #  files with classification number.
     index = {}
-    for path in dicom_paths:
+
+    total = len(dicom_paths)
+    for i, path in enumerate(dicom_paths):
+        print('\rIndexing DICOM files. {0:>10}/{1}'.format(i+1, total), end='')
         f = dicom.read_file(path)
         dir = os.path.dirname(path)
 
@@ -111,6 +118,12 @@ def create_study_index(dicom_paths):
                 dir = os.path.normpath(common_ancestor_dir)
 
         index[f.StudyID] = {'directory': dir}
+
+    print('\x1b[2K\rIndexed all DICOM files.')
+    logging.debug('Indexed following StudyIDs with paths:')
+    for studyID, var in index.iteritems():
+        logging.debug('{0} => {1}'.format(studyID, var['directory']))
+
     return index
 
 
@@ -205,7 +218,10 @@ with open(kreftregisteret_csv, 'rb') as f:
     #  2839 95643 15.012.2014 22 N 2 4 4 4 ...
     #  where the first two values in the line should be PID and InvID
     #  respectively.
+    counter = 1
     for line in reader:
+        print('\rLinking variables with index. {0}'.format(counter), end='')
+        counter += 1
         # The first two elements in an entry are assumed to be PID and InvID.
         # The third element is assumed to be O2_Bildetakingsdato.
         pID, invID = line[0:2]
@@ -238,18 +254,20 @@ with open(kreftregisteret_csv, 'rb') as f:
         else:
             person_invitations_dict[pID] = [index[invNR_in_index]]
 
+    print('\x1b[2K\rLinked all variables.')
+
 
 # Now we have created a dictionary with pID and the screening metadata.
 # We use this dictionary to de-identify the original folder structure,
 #  DICOM files and the csv file from Kreftregisteret.
 
-print("Start anonymizing DICOMs of {} patients."
-      .format(len(person_invitations_dict.keys())))
-
 with open(destination_variables_csv, 'wb') as destination_csv:
     variable_writer = csv.writer(destination_csv, delimiter=delimiter)
 
-    for pID, screenings in person_invitations_dict.iteritems():
+    total = len(person_invitations_dict.keys())
+    for i, person in enumerate(person_invitations_dict.iteritems()):
+        print('\rAnonymizing DICOMs. {0:>10}/{1}'.format(i+1, total), end='')
+        pID, screenings = person
         # Create a random UUID.
         random_uuid = uuid.uuid4().hex
 
@@ -283,7 +301,7 @@ with open(destination_variables_csv, 'wb') as destination_csv:
             # Write variables to a new de-identified csv file.
             variable_writer.writerow([random_uuid] + deidentified_variables)
 
-print("Anonymization has finished.")
+print('\x1b[2K\rAnonymization has finished.')
 
 if test_mode is True:
-    print("=== Test has run smoothly!")
+    print('=== Test has run smoothly!')

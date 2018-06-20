@@ -88,6 +88,24 @@ def find_dicom_paths(source_dir, extension=dicom_extension):
 
 
 def create_study_index(dicom_paths):
+    def commonprefix(l):
+        # os.path.commonprefix always returns path prefixes
+        # as it compares path component wise.
+        cp = []
+        ls = [p.split(os.sep) for p in l]
+        ml = min(len(p) for p in ls)
+
+        for i in range(ml):
+
+            s = set(p[i] for p in ls)         
+            if len(s) != 1:
+                break
+
+            cp.append(s.pop())
+
+        return '/'.join(cp)
+  
+  
     # Creates a dictionary index of StudyIDs and paths to DICOM
     #  files with classification number.
     index = {}
@@ -102,9 +120,7 @@ def create_study_index(dicom_paths):
             idx_dir = index[f.StudyID]['directory']
             # Can be subdirectory, so we traverse down to find common ancestor.
             if idx_dir != dir:
-                common_ancestor_dir = os.path.dirname(
-                    os.path.commonprefix(
-                        [i.replace(os.sep, '/') for i in [dir, idx_dir]]))
+                common_ancestor_dir = commonprefix([dir, idx_dir])
 
                 if common_ancestor_dir == source_dicom_dir:
                     common_slashes = min(

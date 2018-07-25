@@ -20,8 +20,6 @@ dicom_extension = "dcm"
 white_list_laterality = "white_list_laterality.json"
 log_file = "anonymize_dicom_files.log"
 
-logging.basicConfig(filename=log_file, filemode='w', level=logging.DEBUG)
-
 # Input parameters:
 #  kreftregisteret_csv Path to csv file from Kreftregisteret.
 #  destination_variables_csv Path to csv file for de-identified variables.
@@ -50,6 +48,8 @@ parser.add_argument("destination_dicom_dir", type=str, nargs="?",
 parser.add_argument("-m", "--modalities", type=str, default="ot,mg",
                     help="restrict modalities, comma separated "
                          "(default: ot,mg)")
+parser.add_argument("-d", "--debug_file", type=str, default=log_file,
+                    help="load debug file to recreate index")
 parser.add_argument("-t", action="store_true",
                     help="test mode, ignores all other arguments if set")
 
@@ -76,6 +76,22 @@ else:
     source_dicom_dir = str(args.source_dicom_dir)
     destination_dicom_dir = str(args.destination_dicom_dir)
     parsed_modalities = str(args.modalities).split(",")
+    debug_file = str(args.debug_file)
+
+
+load_debug_file = False
+
+if os.path.isfile(debug_file):
+    answer = raw_input('Found loadable debug file ({}). ' \
+                       'Want to load it to skip indexing? Y/n ' \
+                       .format(debug_file))
+    if answer == 'y' or answer == 'Y':
+        load_debug_file = True
+
+if load_debug_file:
+    logging.basicConfig(filename=log_file, filemode='a', level=logging.DEBUG)
+else:
+    logging.basicConfig(filename=log_file, filemode='w', level=logging.DEBUG)
 
 
 def find_dicom_paths(source_dir, extension=dicom_extension):
@@ -85,6 +101,18 @@ def find_dicom_paths(source_dir, extension=dicom_extension):
         for filename in fnmatch.filter(filenames, '*.{}'.format(extension)):
             matches.append(os.path.join(root, filename))
     return matches
+
+
+def recreate_study_index_from_file(file):
+    index = {}
+    with open(file, "r") as f:
+        next(f, None)
+        for line in f:
+            entry = line.replace('DEBUG:root:', '', 1).rstrip("\r\n").split(' => ')
+            if len(entry) != 2:
+                return index
+            index[entry[0]] = {'directory': entry[1]}
+    return index
 
 
 def create_study_index(dicom_paths):
@@ -97,15 +125,15 @@ def create_study_index(dicom_paths):
 
         for i in range(ml):
 
-            s = set(p[i] for p in ls)         
+            s = set(p[i] for p in ls)
             if len(s) != 1:
                 break
 
             cp.append(s.pop())
 
         return '/'.join(cp)
-  
-  
+
+
     # Creates a dictionary index of StudyIDs and paths to DICOM
     #  files with classification number.
     index = {}
@@ -190,8 +218,8 @@ def anonymize_dicoms(source, destination):
     da.run(source, destination)
 
 
-def find_substr(list, substr):
-    for item in list:
+def find_substr(collection, substr):
+    for item in collection:
         if substr in item:
             return item
 
@@ -209,9 +237,13 @@ def find_invNR_from_links(csv_file, target_pID, target_invID):
                 return invNR
 
 
-paths = find_dicom_paths(source_dicom_dir)
 # Create an index for studies and invitations.
-index = create_study_index(paths)
+if load_debug_file:
+    index = recreate_study_index_from_file(debug_file)
+else:
+    paths = find_dicom_paths(source_dicom_dir)
+    index = create_study_index(paths)
+
 # The keys of the index are the invNRs (studyIDs/screenings from DICOM files).
 index_invNRs = index.keys()
 index_invNRs.sort()
@@ -255,11 +287,11 @@ with open(kreftregisteret_csv, 'rb') as f:
         try:
             index[invNR_in_index]['variables'] = variables
         except KeyError:
-            print('Index has the following keys (invNRs/studyIDs):\n' \
-                  '{}'.format("\n".join(index_invNRs)))
-            raise KeyError(
-                'No invNR/studyID {0} in index (pID: {1}, invID: {2})'
-                .format(invNR, pID, invID))
+            msg = 'No invNR/studyID {0} in index (pID: {1}, invID: {2})' \
+                .format(invNR, pID, invID)
+            print(msg)
+            logging.warning(msg)
+            continue
 
         # Check if pID already exists in the dictionary.
         # If it does, add new index entry (screening).

@@ -8,6 +8,7 @@ import csv
 import uuid
 import fnmatch
 import logging
+import re
 
 
 # Set working directory to directory of this file.
@@ -66,7 +67,6 @@ if test_mode is True:
     source_dicom_dir = "tests/identify"
     destination_dicom_dir = "tests/cleaned"
     parsed_modalities = ["mg"]
-
 else:
     # Create a list from the comma separated modalities, so that they can be
     #  used in the dicom anon call to anonymize the DICOM files.
@@ -76,9 +76,8 @@ else:
     source_dicom_dir = str(args.source_dicom_dir)
     destination_dicom_dir = str(args.destination_dicom_dir)
     parsed_modalities = str(args.modalities).split(",")
-    debug_file = str(args.debug_file)
 
-
+debug_file = str(args.debug_file)
 load_debug_file = False
 
 if os.path.isfile(debug_file):
@@ -219,36 +218,48 @@ def anonymize_dicoms(source, destination):
 
 
 def find_substr(collection, substr):
-    for item in collection:
-        if substr in item:
-            return item
+    r = re.compile(r"(\S*\b{}\b\S*)".format(substr))
+    f = filter(r.match, collection)
+    if len(f) == 1:
+        return f[0]
+    elif len(f) > 1:
+        logging.warning("Two matches for {} => {}".format(substr, f))
+        return f[0]
 
 
-def find_invNR_from_links(csv_file, target_pID, target_invID):
+def create_links_index(csv_file):
+    index = {}
+    print('\rIndexing links file.')
     with open(csv_file, 'rb') as f:
         if skip_first_line is True:
             next(f, None)
-
         reader = csv.reader(f, delimiter=delimiter)
-
         for line in reader:
             pID, _, invID, invNR = line
-            if pID == target_pID and invID == target_invID:
-                return invNR
+            if pID in index:
+                if invID in index[pID]:
+                    logging.warning("InvID {} in links file twice!" \
+                                    .format(invID))
+                else:
+                    index[pID][invID] = invNR
+            else:
+                index[pID] = {invID: invNR}
+    print('Indexed links file.')
+    return index
 
 
 # Create an index for studies and invitations.
 if load_debug_file:
-    index = recreate_study_index_from_file(debug_file)
+    study_idx = recreate_study_index_from_file(debug_file)
 else:
     paths = find_dicom_paths(source_dicom_dir)
-    index = create_study_index(paths)
+    study_idx = create_study_index(paths)
+
+person_invitations_idx = {}
+links_idx = create_links_index(links_csv)
 
 # The keys of the index are the invNRs (studyIDs/screenings from DICOM files).
-index_invNRs = index.keys()
-index_invNRs.sort()
-
-person_invitations_dict = {}
+study_idx_invNRs = study_idx.keys()
 
 # Open the links csv file.
 with open(kreftregisteret_csv, 'rb') as f:
@@ -268,7 +279,7 @@ with open(kreftregisteret_csv, 'rb') as f:
     #  respectively.
     counter = 1
     for line in reader:
-        print('\rLinking variables with index. {0}'.format(counter), end='')
+        print('Linking variables with index. {0}'.format(counter), end='')
         counter += 1
         # The first two elements in an entry are assumed to be PID and InvID.
         # The third element is assumed to be O2_Bildetakingsdato.
@@ -278,17 +289,23 @@ with open(kreftregisteret_csv, 'rb') as f:
         variables = deidentify_variables(line[2:])
 
         # Retrieve the invitation number from the links file.
-        invNR = find_invNR_from_links(links_csv, pID, invID)
+        try:
+            invNR = links_idx[pID][invID]
+        except KeyError:
+            msg = 'pID: {0}, invID: {1} not in links index!'.format(pID, invID)
+            print(msg)
+            logging.warning(msg)
+            continue
 
         # Retrieve the corresponding invitation number (studyID from the index).
-        invNR_in_index = find_substr(index_invNRs, invNR)
+        invNR_in_study_idx = find_substr(study_idx_invNRs, invNR)
 
         # Place the variables in the index for this invitation number.
         try:
-            index[invNR_in_index]['variables'] = variables
+            study_idx[invNR_in_study_idx]['variables'] = variables
         except KeyError:
-            msg = 'No invNR/studyID {0} in index (pID: {1}, invID: {2})' \
-                .format(invNR, pID, invID)
+            msg = 'No invNR/studyID {0} in study index (pID: {1}, invID: {2})' \
+                  .format(invNR, pID, invID)
             print(msg)
             logging.warning(msg)
             continue
@@ -297,10 +314,10 @@ with open(kreftregisteret_csv, 'rb') as f:
         # If it does, add new index entry (screening).
         # If it does not, create a new dictionary key with pID and store
         #  the first index entry (screening) along the dictionary key.
-        if pID in person_invitations_dict:
-            person_invitations_dict[pID].append(index[invNR_in_index])
+        if pID in person_invitations_idx:
+            person_invitations_idx[pID].append(study_index[invNR_in_study_idx])
         else:
-            person_invitations_dict[pID] = [index[invNR_in_index]]
+            person_invitations_idx[pID] = [study_idx[invNR_in_study_idx]]
 
     print('\x1b[2K\rLinked all variables.')
 
@@ -312,8 +329,8 @@ with open(kreftregisteret_csv, 'rb') as f:
 with open(destination_variables_csv, 'wb') as destination_csv:
     variable_writer = csv.writer(destination_csv, delimiter=delimiter)
 
-    total = len(person_invitations_dict.keys())
-    for i, person in enumerate(person_invitations_dict.iteritems()):
+    total = len(person_invitations_idx.keys())
+    for i, person in enumerate(person_invitations_idx.iteritems()):
         print('\rAnonymizing DICOMs. {0:>10}/{1}'.format(i+1, total), end='')
         pID, screenings = person
         # Create a random UUID.
@@ -329,6 +346,12 @@ with open(destination_variables_csv, 'wb') as destination_csv:
         for screening in screenings:
             # Find paths to DICOM files for this screening.
             original_screening_path = screening['directory']
+
+            if original_screening_path == source_dicom_dir:
+                logging.warning('Cannot anonymize base folder {} for pID: {}' \
+                                .format(original_screening_path, pID))
+                continue
+
             deidentified_variables = screening['variables']
 
             # Retrieve the screening month and year from the list of

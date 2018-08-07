@@ -170,28 +170,6 @@ def create_study_index(dicom_paths):
     return index
 
 
-def deidentify_variables(variable_list):
-    # This function accepts a list with variables from the csv file
-    #  from Krefregisteret. The list of variables follows the same order
-    #  as the variables from the csv file, but does not contain pID nor
-    #  invID. The first element in the list is thus O2_Bildetakingsdato.
-    #
-    # This function does the following:
-    #  - O2_Bildetakingsdato is converted from dd.mmm.yyyy to mmm.yyyy.
-    #  - Diagnosedato is made relative from O2_Bildetakingsdato in days.
-    screening_date = dateparser.parse(variable_list[0])
-    diagnose_date = dateparser.parse(variable_list[7])
-
-    variable_list[0] = "{0}-{1}".format(screening_date.month,
-                                        screening_date.year)
-
-    if diagnose_date:
-        diagnose_screening_delta = diagnose_date - screening_date
-        variable_list[7] = str(diagnose_screening_delta.days)
-
-    return variable_list
-
-
 def anonymize_dicoms(source, destination):
     # Create an instance of the dicom anonymizer (dicom-anon).
     #  quarantine: The folder where DICOMs that cannot be anonymized are copied
@@ -283,10 +261,7 @@ with open(kreftregisteret_csv, 'rb') as f:
         counter += 1
         # The first two elements in an entry are assumed to be PID and InvID.
         # The third element is assumed to be O2_Bildetakingsdato.
-        pID, invID = line[0:2]
-
-        # De-identify the rest of the variables.
-        variables = deidentify_variables(line[2:])
+        pID, invID, variables = line[0], line[1], line[2:]
 
         # Retrieve the invitation number from the links file.
         try:
@@ -315,7 +290,7 @@ with open(kreftregisteret_csv, 'rb') as f:
         # If it does not, create a new dictionary key with pID and store
         #  the first index entry (screening) along the dictionary key.
         if pID in person_invitations_idx:
-            person_invitations_idx[pID].append(study_index[invNR_in_study_idx])
+            person_invitations_idx[pID].append(study_idx[invNR_in_study_idx])
         else:
             person_invitations_idx[pID] = [study_idx[invNR_in_study_idx]]
 

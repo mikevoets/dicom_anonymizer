@@ -257,7 +257,7 @@ with open(kreftregisteret_csv, 'rb') as f:
     #  respectively.
     counter = 1
     for line in reader:
-        print('Linking variables with index. {0}'.format(counter), end='')
+        print('\rLinking variables with index. {0}'.format(counter), end='')
         counter += 1
         # The first two elements in an entry are assumed to be PID and InvID.
         # The third element is assumed to be O2_Bildetakingsdato.
@@ -322,8 +322,11 @@ with open(destination_variables_csv, 'wb') as destination_csv:
             # Find paths to DICOM files for this screening.
             original_screening_path = screening['directory']
 
-            if original_screening_path == source_dicom_dir:
-                logging.warning('Cannot anonymize base folder {} for pID: {}' \
+            if os.path.normpath(original_screening_path) in \
+                os.path.normpath(source_dicom_dir):
+                # The right screening path could not be found, so we skip
+                #  anonymizing this screening.
+                logging.warning('Cannot anonymize folder {} for pID: {}' \
                                 .format(original_screening_path, pID))
                 continue
 
